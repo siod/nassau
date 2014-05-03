@@ -8,6 +8,10 @@ from .models import (
     Item,
     )
 import json
+import feedparser
+import re
+import tmdbsimple
+import copy
 
 
 #@view_config(route_name='home', renderer='templates/mytemplate.pt')
@@ -26,7 +30,7 @@ def rootPage(request):
         return Response(conn_err_msg, content_type='text/plain', status_int=500)
     return {'one': one, 'project': 'nassau'}
 
-@view_config(route_name='items', request_method='PATCH', renderer='json')
+@view_config(route_name='updateItem', request_method='PATCH', renderer='json')
 def updateItem(request):
     try:
         item = DBSession.query(Item).filter(Item.id == request.matchdict['id']).first()
@@ -43,8 +47,68 @@ def updateItem(request):
     except DBAPIError:
         return Response(conn_err_msg, content_type='text/plain', status_int=500)
 
+tmdb = tmdbsimple.TMDB('')
+def getMovieInfo(title,year):
+    search = tmdb.Search()
+    response = search.movie( { 'query' : title , 'year' : year})
+    if (search):
+        if (len(search.results) == 1):
+            return search.results[0]
+        for x in search.results:
+            if (x['title'] == title):
+                return x
 
+    print("Unable to find " + title + " " + year + " on tmdb")
+    print(repr(search.results))
+    return {'title' : title, 'release_date' : year, 'poster_path' : '' }
 
+def addIfHighestQuality(newMovie,dest_list):
+    dest_copy = copy.deepcopy(dest_list)
+    for y in dest_copy:
+        if y['title'] == newMovie['title']:
+            if (newMovie['quality'] == '1080p' and y['quality'] != '1080p'):
+                dest_list.remove(y)
+                dest_list.append(newMovie)
+                return
+            return
+    dest_list.append(newMovie)
+
+movieRegex = re.compile(r'([A-Za-z\d\._-]+\.)((19|20)\d\d)\.([0-9]{3,4}p)\.')
+@view_config(route_name='latestMovies', renderer='templates/movies.pt')
+def latestMovies(request):
+    try:
+        moviesFeed = ''
+        movieInfo = feedparser.parse(moviesFeed)
+        initialMovies = []
+        for x in movieInfo.entries:
+            if (DBSession.exists().where(Torrent.name == x.title)):
+                continue
+            titleSearch = movieRegex.search(x.title)
+            movieTitle = titleSearch.group(1)
+            movieTitle = movieTitle.replace('.',' ')[:-1]
+            movieYear = titleSearch.group(2)
+            movieQuality = titleSearch.group(4)
+            initialMovies.append({
+                'release_date' : movieYear,
+                'title' : movieTitle,
+                'quality' : movieQuality,
+                'torrent_name' : x.title,
+                'download_path' : x.link
+                })
+        raw_movies = []
+        for x in initialMovies:
+            addIfHighestQuality(x,raw_movies)
+
+        movies = []
+        for x in raw_movies:
+            #if (DBSession.query(Movie).filter(Movie.title == x['title'])
+            print( x['title'] + ' ' + x['release_date'] + ' ' + x['quality'])
+            movies.append(getMovieInfo(x['title'],x['release_date']))
+        baseURL = 'http://image.tmdb.org/t/p/'
+        posterSize = 'w185'
+        return { 'baseURL' : baseURL, 'posterSize' : posterSize ,'movies' : movies }
+    except DBAPIError:
+        return Response(conn_err_msg, content_type='text/plain', status_int=500)
 
 @view_config(route_name='items', request_method='PUT', renderer='json')
 def createItem(request):
