@@ -13,25 +13,56 @@
         }
         .poster {
             width: 187px;
-            height: 280px;
+            height: 275px;
             margin-left:10px;
             margin-right:10px;
-            margin-bottom:20px;
-            margin-top:20px;
+            margin-bottom:15px;
+            margin-top:15px;
             float:left;
             color: #FFFFFF;
+        }
+        .poster img {
             border:1px solid #000;
             border-radius:6px;
             overflow:hidden;
         }
+        .poster a {
+            display: inline-block;
+            cursor: pointer;
+
+        }
+        .poster-downloaded img {
+            border:1px solid #5cb85c;
+        }
+
     </style>
 </head>
 <body>
 	<div class="container">
-        <div tal:repeat="movie movies" class="poster">
-            <img src="${baseURL}${posterSize}${movie.poster_path}" alt="${movie.title}" title="${movie.title}">
+        <div tal:repeat="movie movies" tal:attributes="class 'poster poster-downloaded' if movie.downloaded else 'poster'">
+            <a href="${request.application_url}/movie/${movie.id}/download">
+                <img src="${baseURL}${posterSize}${movie.poster_path}" alt="${movie.title}" title="${movie.title}" data-id="${movie.id}" />
+            </a>
             <!--!<p>${movie.title} ${movie.release_date}</p>-->
         </div>
 	</div>
+	<script type="text/javascript">
+        $(document).ready(function() {
+                $('.poster a').click(function() {
+                    var thisPoster = this;
+                    $.post($(this).attr('href'))
+                        .done(function(data) {
+                            console.log("download started");
+                            $(thisPoster).parent().addClass('poster-downloaded');
+                        })
+                        .fail(function(data) {
+                            console.log("failed");
+                            console.log(data);
+                        });
+
+                    return false;
+                });
+        });
+    </script>
 </body>
 </html>

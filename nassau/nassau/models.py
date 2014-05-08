@@ -21,17 +21,25 @@ DBSession = scoped_session(sessionmaker(extension=ZopeTransactionExtension()))
 Base = declarative_base()
 
 
+class Setting(Base):
+    __tablename__ = 'settings'
+    name = Column(String(50),primary_key = True)
+    value = Column(String(50))
+
+    def __init__(self,name,value):
+        self.name = name
+        self.value = value
+
 class Movie(Base):
     __tablename__ = 'movies'
     id = Column(Integer, primary_key=True)
-    tmdb_id = Column(Integer)
+    tmdb_id = Column(Integer,index=True,unique=True)
     title = Column(String(50))
     release_date = Column(Date)
     poster_path = Column(String(50))
-    quality = Column(String(20))
     downloaded = Column(Boolean)
 
-    def __init__(self,tmdb_id,title,release_date,poster_path,download_path,downloaded):
+    def __init__(self,title,tmdb_id,release_date,poster_path,downloaded):
         self.title = title
         self.tmdb_id = tmdb_id
         self.release_date = release_date
@@ -42,14 +50,14 @@ class Torrent(Base):
     __tablename__ = 'torrents'
     id = Column(Integer, primary_key=True)
     name = Column(String(100),index=True,unique=True)
-    decoded_name = Column(String(100),index=True,unique=True)
-    movie_id = Column(Integer, ForeignKey('movies.id'))
+    decoded_name = Column(String(100),index=True)
+    movie_id = Column(Integer)
     download_path = Column(String(255))
     quality = Column(String(20))
 
-    def __init__(self,torrent_name,movie_name,movie_id, download_path,quality):
+    def __init__(self,torrent_name,decoded_name,movie_id, download_path,quality):
         self.name = torrent_name
-        self.movie_name = movie_name
+        self.decoded_name = decoded_name
         self.movie_id = movie_id
         self.download_path = download_path
         self.quality = quality
