@@ -107,8 +107,8 @@ def updateMovies():
                 continue
             titleSearch = movieRegex.search(x.title)
             if (titleSearch == None):
-                print("Regex failed to parse: " + x.title)
-                print(repr(x))
+                log.error("Regex failed to parse: " + x.title)
+                log.error(repr(x))
                 continue
             movieTitle = titleSearch.group(1)
             movieTitle = movieTitle.replace('.',' ')[:-1]
@@ -132,6 +132,12 @@ def updateMovies():
         return True
     except DBAPIError:
         return False
+
+@view_config(route_name='update')
+def update(Request):
+    if (updateMovies()):
+        return Response('Update finished successfully', content_type='text/plain', status_int=204)
+    return Response('Update was unsuccessfull', content_type='text/plain', status_int=500)
 
 def setupTorrentAuth():
     auth_settings = DBSession.query(Setting).filter(Setting.name.like("auth_%")).all()
@@ -202,7 +208,6 @@ def downloadMovie(request):
 @view_config(route_name='latestMovies', renderer='templates/movies.pt')
 def latestMovies(request):
     try:
-        updateMovies()
         baseURL = 'http://image.tmdb.org/t/p/'
         posterSize = 'w185'
         return { 'baseURL' : baseURL, 'posterSize' : posterSize ,'movies' :
