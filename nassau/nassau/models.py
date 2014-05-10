@@ -33,7 +33,7 @@ class Setting(Base):
 class Movie(Base):
     __tablename__ = 'movies'
     id = Column(Integer, primary_key=True)
-    tmdb_id = Column(Integer,index=True,unique=True)
+    tmdb_id = Column(Integer,index=True,unique=True,nullable=True)
     title = Column(String(50))
     release_date = Column(Date)
     poster_path = Column(String(50))

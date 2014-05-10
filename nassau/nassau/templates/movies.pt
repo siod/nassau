@@ -41,7 +41,8 @@
 	<div class="container">
         <div tal:repeat="movie movies" tal:attributes="class 'poster poster-downloaded' if movie.downloaded else 'poster'">
             <a href="${request.application_url}/movie/${movie.id}/download">
-                <img src="${baseURL}${posterSize}${movie.poster_path}" alt="${movie.title}" title="${movie.title}" data-id="${movie.id}" />
+                <img tal:condition="python:len(movie.poster_path)  > 0" src="${baseURL}${posterSize}${movie.poster_path}" alt="${movie.title}" title="${movie.title}" data-id="${movie.id}" />
+                <img tal:condition="python:len(movie.poster_path)  == 0" src="${noPoster}" alt="${movie.title}" title="${movie.title}" />
             </a>
             <!--!<p>${movie.title} ${movie.release_date}</p>-->
         </div>

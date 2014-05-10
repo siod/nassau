@@ -63,29 +63,47 @@ def setupTMDB():
             log.error('tmdb_api_key is missing from the database')
             raise Exception('Invalid Database')
 
-
-def createMovie(title,year):
+def lookupMovie(details,maxResults = None):
     setupTMDB()
     search = tmdb.Search()
-    response = search.movie( { 'query' : title , 'year' : year})
+    response = search.movie(details)
     movieInfo = None
     if ( search.results == 0):
-        print("Unable to find " + title + " " + year + " on tmdb")
-    elif (len(search.results) == 1):
+        log.warning("Unable to find " + str(details) + " on tmdb")
+        return None
+
+    if (len(search.results) == 1):
         movieInfo = search.results[0]
-    else:
+    elif (maxResults == None or maxResults <= len(search.results)):
         for x in search.results:
             movieInfo = search.results[0]
             break
-
-    if (movieInfo != None):
-        movie = Movie(movieInfo['title'],
-                movieInfo['id'],
-                datetime.datetime.strptime((movieInfo['release_date']),"%Y-%m-%d").date(),
-                movieInfo['poster_path'],
-                False)
     else:
-        movie = Movie(title,0,datetime.date(year,1,1),'',False)
+        return None
+    if (movieInfo == None):
+        return None
+
+    return Movie(movieInfo['title'],
+            movieInfo['id'],
+            datetime.datetime.strptime((movieInfo['release_date']),"%Y-%m-%d").date(),
+            movieInfo['poster_path'],
+            False)
+
+def createMovie(title,year):
+    movie = lookupMovie( { 'query' : title , 'year' : year})
+    if (movie == None):
+        log.info("Attempting to get movie without year")
+        movie = lookupMovie( { 'query' : title },1)
+        if (movie == None):
+            log.warning("Creating movie without tmdb info")
+            movie = Movie(title,None,datetime.date(year,1,1),'',False)
+    if (movie.tmdb_id != None):
+        #Check to see if the Movie is in the database, but has a slight variation on the name
+        try:
+            existingMovie = DBSession.query(Movie).filter(Movie.tmdb_id == movie.tmdb_id).one()
+            return existingMovie.id
+        except NoResultFound:
+            pass
     DBSession.add(movie)
     DBSession.flush()
     DBSession.refresh(movie)
@@ -112,7 +130,7 @@ def updateMovies():
                 continue
             movieTitle = titleSearch.group(1)
             movieTitle = movieTitle.replace('.',' ')[:-1]
-            movieYear = titleSearch.group(2)
+            movieYear = int(titleSearch.group(2))
             movieQuality = titleSearch.group(4)
             movieTorrents.append({
                 'release_date' : movieYear,
@@ -131,6 +149,7 @@ def updateMovies():
             DBSession.add(newTorrent)
         return True
     except DBAPIError:
+        log.exception("Update movies caused an exception")
         return False
 
 @view_config(route_name='update')
@@ -165,13 +184,11 @@ def queueTorrentDownload(torrent,download_dir):
         options = urllib.urlencode({ 'dir_edit' : download_dir})
         request = urllib2.Request(url + '?' + options,data=urllib.urlencode( {'url' : torrent.download_path}))
         response = urllib2.urlopen(request)
-        print("Response url: " + str(response.geturl()))
-        print("Response code: " + str(response.getcode()))
-        print(repr(response))
+        log.info("Response url: " + str(response.geturl()))
+        log.info("Response code: " + str(response.getcode()))
         return True
     except urllib2.URLError as e:
-        print("Download of : " + torrent.name + " failed code: " + str(e.code))
-        print(str(e))
+        log.exception("Download of : " + torrent.name + " failed")
         return False
 
 
@@ -200,19 +217,20 @@ def downloadMovie(request):
                 movie.downloaded = True
                 return Response('Success', content_type='text/plain', status_int=200)
         except NoResultFound:
-            print("Unable to find suitable torrent")
+            log.error("Unable to find suitable torrent")
 
     except DBAPIError:
-        print(":(")
+        log.exception(":(")
 
 @view_config(route_name='latestMovies', renderer='templates/movies.pt')
 def latestMovies(request):
     try:
         baseURL = 'http://image.tmdb.org/t/p/'
         posterSize = 'w185'
-        return { 'baseURL' : baseURL, 'posterSize' : posterSize ,'movies' :
+        return { 'baseURL' : baseURL, 'posterSize' : posterSize , 'noPoster' : request.static_url('nassau:static/no-poster-w185.jpg'), 'movies' :
                 DBSession.query(Movie).order_by(desc(Movie.id)).all() }
     except DBAPIError:
+        log.exception("Exception when displaying movies")
         return Response(conn_err_msg, content_type='text/plain', status_int=500)
 
 @view_config(route_name='items', request_method='PUT', renderer='json')

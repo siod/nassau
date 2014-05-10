@@ -13,6 +13,7 @@ from ..models import (
     DBSession,
     Item,
     Base,
+    Setting,
     )
 
 
@@ -37,3 +38,20 @@ def main(argv=sys.argv):
         DBSession.add(model)
         model = Item(torrent_name = 'Futurama.Benders.Big.Game',name= 'Futurama Benders Big Game',type=2,status=3,extracted_loc='torrentz')
         DBSession.add(model)
+        setting = Setting(name = 'tmdb_api_key',value = '')
+        DBSession.add(setting)
+        setting = Setting(name = 'rss_url',value = '')
+        DBSession.add(setting)
+        setting = Setting(name = 'auth_realm',value = '')
+        DBSession.add(setting)
+        setting = Setting(name = 'auth_uri',value = '')
+        DBSession.add(setting)
+        setting = Setting(name = 'auth_user',value = '')
+        DBSession.add(setting)
+        setting = Setting(name = 'auth_passwd',value = '')
+        DBSession.add(setting)
+        setting = Setting(name = 'default_quality',value = '1080p')
+        DBSession.add(setting)
+        setting = Setting(name = 'torrent_url',value = '')
+        DBSession.add(setting)
+
