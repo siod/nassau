@@ -6,6 +6,7 @@ from sqlalchemy import (
     String,
     Boolean,
     Date,
+    Float,
     )
 
 from sqlalchemy.ext.declarative import declarative_base
@@ -38,13 +39,15 @@ class Movie(Base):
     release_date = Column(Date)
     poster_path = Column(String(50))
     downloaded = Column(Boolean)
+    rating = Column(Float,nullable=True)
 
-    def __init__(self,title,tmdb_id,release_date,poster_path,downloaded):
+    def __init__(self,title,tmdb_id,release_date,poster_path,downloaded,rating):
         self.title = title
         self.tmdb_id = tmdb_id
         self.release_date = release_date
         self.poster_path = poster_path
         self.downloaded = downloaded
+        self.rating = rating
 
 class Torrent(Base):
     __tablename__ = 'torrents'

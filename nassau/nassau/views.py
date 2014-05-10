@@ -87,7 +87,8 @@ def lookupMovie(details,maxResults = None):
             movieInfo['id'],
             datetime.datetime.strptime((movieInfo['release_date']),"%Y-%m-%d").date(),
             movieInfo['poster_path'],
-            False)
+            False,
+            movieInfo['vote_average'])
 
 def createMovie(title,year):
     movie = lookupMovie( { 'query' : title , 'year' : year})
@@ -96,7 +97,7 @@ def createMovie(title,year):
         movie = lookupMovie( { 'query' : title },1)
         if (movie == None):
             log.warning("Creating movie without tmdb info")
-            movie = Movie(title,None,datetime.date(year,1,1),'',False)
+            movie = Movie(title,None,datetime.date(year,1,1),'',False,None)
     if (movie.tmdb_id != None):
         #Check to see if the Movie is in the database, but has a slight variation on the name
         try:

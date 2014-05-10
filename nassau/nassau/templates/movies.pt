@@ -13,7 +13,7 @@
         }
         .poster {
             width: 187px;
-            height: 275px;
+            height: 300px;
             margin-left:10px;
             margin-right:10px;
             margin-bottom:15px;
@@ -35,6 +35,16 @@
             border:1px solid #5cb85c;
         }
 
+        .stars-container {
+            background: url("${request.static_url('nassau:static/star_off.png')}");
+            width:120px;
+            height:22px;
+        }
+        .stars-container .rating {
+            background: url("${request.static_url('nassau:static/star_on.png')}");
+            height:22px;
+        }
+
     </style>
 </head>
 <body>
@@ -44,7 +54,10 @@
                 <img tal:condition="python:len(movie.poster_path)  > 0" src="${baseURL}${posterSize}${movie.poster_path}" alt="${movie.title}" title="${movie.title}" data-id="${movie.id}" />
                 <img tal:condition="python:len(movie.poster_path)  == 0" src="${noPoster}" alt="${movie.title}" title="${movie.title}" />
             </a>
-            <!--!<p>${movie.title} ${movie.release_date}</p>-->
+            <div tal:condition="python:movie.rating != None" class="stars-container">
+                <div class="rating" title="${movie.rating}/10" style="width:${movie.rating*10}%;"></div>
+            </div>
+            <p tal:condition="python:len(movie.poster_path)  == 0">${movie.title}</p>
         </div>
 	</div>
 	<script type="text/javascript">
