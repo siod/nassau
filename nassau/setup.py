@@ -14,10 +14,11 @@ requires = [
     'pyramid_debugtoolbar',
     'zope.sqlalchemy',
     'waitress',
+    'feedparser',
     ]
 
 setup(name='nassau',
-      version='0.0',
+      version='0.1',
       description='nassau',
       long_description=README + '\n\n' + CHANGES,
       classifiers=[
