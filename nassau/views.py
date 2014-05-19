@@ -141,10 +141,10 @@ def updateMovies():
                 'download_path' : x.link
                 })
         for x in movieTorrents:
-            try:
-                torrent = DBSession.query(Torrent).filter(Torrent.decoded_name == x['title']).one()
+            torrent = DBSession.query(Torrent).filter(Torrent.decoded_name == x['title']).first()
+            if (torrent != None):
                 movie_id = torrent.movie_id
-            except NoResultFound:
+            else:
                 movie_id = createMovie(x['title'],x['release_date'])
             newTorrent = Torrent(x['name'],x['title'],movie_id,x['download_path'],x['quality'].lower())
             DBSession.add(newTorrent)
