@@ -36,6 +36,7 @@
         }
 
         .stars-container {
+			float:left;
             background: url("${request.static_url('nassau:static/star_off.png')}");
             width:120px;
             height:22px;
@@ -45,19 +46,27 @@
             height:22px;
         }
 
+		.quality {
+			float: right;
+			padding-top:5px;
+		}
+
     </style>
 </head>
 <body>
 	<div class="container">
         <div tal:repeat="movie movies" tal:attributes="class 'poster poster-downloaded' if movie.downloaded else 'poster'">
             <a href="${request.application_url}/movie/${movie.id}/download">
-                <img tal:condition="python:len(movie.poster_path)  > 0" src="${baseURL}${posterSize}${movie.poster_path}" alt="${movie.title}" title="${movie.title}" data-id="${movie.id}" />
-                <img tal:condition="python:len(movie.poster_path)  == 0" src="${noPoster}" alt="${movie.title}" title="${movie.title}" />
+                <img tal:condition="python:movie.poster_path and len(movie.poster_path)  > 0" src="${baseURL}${posterSize}${movie.poster_path}" alt="${movie.title}" title="${movie.title}" data-id="${movie.id}" />
+                <img tal:condition="python:not movie.poster_path or len(movie.poster_path)  == 0" src="${noPoster}" alt="${movie.title}" title="${movie.title}" />
             </a>
+			<div class="poster-info">
             <div tal:condition="python:movie.rating != None" class="stars-container">
                 <div class="rating" title="${movie.rating}/10" style="width:${movie.rating*10}%;"></div>
             </div>
-            <p tal:condition="python:len(movie.poster_path)  == 0">${movie.title}</p>
+			<span class="quality">${qualities[str(movie.id)][0]}</span>
+            <p tal:condition="python:not movie.poster_path or len(movie.poster_path)  == 0">${movie.title}</p>
+			</div>
         </div>
 	</div>
 	<script type="text/javascript">

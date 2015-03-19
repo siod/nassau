@@ -228,8 +228,21 @@ def latestMovies(request):
     try:
         baseURL = 'http://image.tmdb.org/t/p/'
         posterSize = 'w185'
+        torrents = DBSession.query(Torrent).order_by(Torrent.movie_id,Torrent.quality).all()
+
+        qualityDict = dict()
+        cur_movieid = torrents[0].movie_id
+        qualities = []
+        for x in torrents:
+            if (x.movie_id != cur_movieid):
+                qualityDict[str(cur_movieid)] = qualities;
+                qualities = []
+                cur_movieid = x.movie_id
+            qualities.append(x.quality)
+        qualityDict[str(cur_movieid)] = qualities;
+
         return { 'baseURL' : baseURL, 'posterSize' : posterSize , 'noPoster' : request.static_url('nassau:static/no-poster-w185.jpg'), 'movies' :
-                DBSession.query(Movie).order_by(desc(Movie.id)).all() }
+                DBSession.query(Movie).order_by(desc(Movie.id)).all(), 'qualities' : qualityDict }
     except DBAPIError:
         log.exception("Exception when displaying movies")
         return Response(conn_err_msg, content_type='text/plain', status_int=500)
