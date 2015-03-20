@@ -247,6 +247,29 @@ def latestMovies(request):
         log.exception("Exception when displaying movies")
         return Response(conn_err_msg, content_type='text/plain', status_int=500)
 
+@view_config(route_name='torrents', renderer='templates/torrents.pt')
+def torrentsPage(request):
+    try:
+        torrents = DBSession.query(Torrent).order_by(desc(Torrent.id)).all()
+        return { 'torrents' : torrents }
+    except DBAPIError:
+        log.exception("Exception when displaying torrents")
+        return Response(conn_err_msg, content_type='text/plain', status_int=500)
+
+@view_config(route_name='getTorrents', renderer='json')
+def gettorrents(request):
+    try:
+        query = DBSession.query(Torrent).order_by(desc(Torrent.id)).all()
+        torrents = []
+        for x in query:
+                torrents.append(x.toJSON())
+        return torrents
+
+    except DBAPIError:
+        log.exception("Exception when displaying torrents")
+        return Response(conn_err_msg, content_type='text/plain', status_int=500)
+
+
 @view_config(route_name='items', request_method='PUT', renderer='json')
 def createItem(request):
     try:

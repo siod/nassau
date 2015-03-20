@@ -19,6 +19,8 @@ def main(global_config, **settings):
     config.add_route('home', '/')
     config.add_route('items', '/item')
     config.add_route('updateItem', '/item/{id}')
+    config.add_route('torrents', '/torrents')
+    config.add_route('getTorrents', '/torrent')
     config.add_route('latestMovies', '/movies')
     config.add_route('downloadMovie', '/movie/{id}/download')
     config.add_route('update', '/update')

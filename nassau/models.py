@@ -65,6 +65,16 @@ class Torrent(Base):
         self.download_path = download_path
         self.quality = quality
 
+    def toJSON(self):
+        return {
+                'id' : self.id,
+                'name' : self.name,
+                'decoded_name' : self.decoded_name,
+                'movie_id' : self.movie_id,
+                'download_path' : self.download_path,
+                'quality' : self.quality
+            }
+
 class Item(Base):
     __tablename__ = 'items'
     id = Column(Integer, primary_key=True)
