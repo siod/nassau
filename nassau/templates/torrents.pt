@@ -10,6 +10,22 @@
 	<script src="${request.static_url('nassau:static/js/nassau.js')}"></script>
 </head>
 <body>
+    <nav class="navbar navbar-inverse">
+    <div class="container">
+        <div class="navbar-header">
+            <a class="navbar-brand" href="#">Nassau</a>
+        </div>
+        <div class="collapse navbar-collapse">
+            <ul class="nav navbar-nav">
+                <li>
+                    <a href="${request.application_url}/movies">Movies</a>
+                </li>
+                <li>
+                    <a href="${request.application_url}/torrents">Torrents</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
 	<div class="container">
 		<div class="panel panel-default">
 			<div class="panel-heading">Torrents</div>
@@ -17,20 +33,20 @@
 				<thead>
 					<tr>
 						<th>ID</th>
-						<th>Name</th>
-						<th>Decoded Name</th>
 						<th>Movie ID</th>
-						<th>quality</th>
+						<th>Decoded Name</th>
+						<th>Quality</th>
+						<th>Name</th>
 						<th>Download</th>
 					</tr>
 				</thead>
 				<tbody>
                 <tr tal:repeat="torrent torrents">
                     <td>${torrent.id}</td>
-                    <td>${torrent.name}</td>
-                    <td>${torrent.decoded_name}</td>
                     <td>${torrent.movie_id}</td>
+                    <td>${torrent.decoded_name}</td>
                     <td>${torrent.quality}</td>
+                    <td>${torrent.name}</td>
                     <td><a class="btn btn-danger" href="${torrent.download_path}">Download</a></td>
                 </tr>
 				</tbody>

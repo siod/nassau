@@ -24,5 +24,6 @@ def main(global_config, **settings):
     config.add_route('latestMovies', '/movies')
     config.add_route('downloadMovie', '/movie/{id}/download')
     config.add_route('update', '/update')
+    config.add_route('updateTv', '/tv/update')
     config.scan()
     return config.make_wsgi_app()

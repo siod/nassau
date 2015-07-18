@@ -54,6 +54,22 @@
     </style>
 </head>
 <body>
+    <nav class="navbar navbar-inverse">
+    <div class="container">
+        <div class="navbar-header">
+            <a class="navbar-brand" href="#">Nassau</a>
+        </div>
+        <div class="collapse navbar-collapse">
+            <ul class="nav navbar-nav">
+                <li>
+                    <a href="${request.application_url}/movies">Movies</a>
+                </li>
+                <li>
+                    <a href="${request.application_url}/torrents">Torrents</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
 	<div class="container">
         <div tal:repeat="movie movies" tal:attributes="class 'poster poster-downloaded' if movie.downloaded else 'poster'">
             <a href="${request.application_url}/movie/${movie.id}/download">

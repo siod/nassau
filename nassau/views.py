@@ -17,15 +17,18 @@ from .models import (
 import json
 import feedparser
 import re
-import tmdbsimple
+import tmdbsimple as tmdb
 import copy
 import datetime
 import urllib
 import urllib2
+import ssl
 
 import logging
 log = logging.getLogger(__name__)
 
+#tmdb = None
+isTmdbSetup = False
 
 @view_config(route_name='home', renderer='templates/home.pt')
 def rootPage(request):
@@ -52,21 +55,24 @@ def updateItem(request):
     except DBAPIError:
         return Response(conn_err_msg, content_type='text/plain', status_int=500)
 
-tmdb = None
 def setupTMDB():
-    global tmdb
-    if (tmdb == None):
-        try:
-            (api_key,) = DBSession.query(Setting.value).filter(Setting.name == 'tmdb_api_key').one()
-            tmdb = tmdbsimple.TMDB(api_key)
-        except NoResultFound:
-            log.error('tmdb_api_key is missing from the database')
-            raise Exception('Invalid Database')
+    global isTmdbSetup
+    if (isTmdbSetup):
+        return
+    try:
+        (api_key,) = DBSession.query(Setting.value).filter(Setting.name == 'tmdb_api_key').one()
+        tmdb.API_KEY = api_key
+        isTmdbSetup = True
+        #tmdb = tmdbsimple.API_KEY = api_key
+    except NoResultFound:
+        log.error('tmdb_api_key is missing from the database')
+        raise Exception('Invalid Database')
 
-def lookupMovie(details,maxResults = None):
+def lookupMovie(title,year,maxResults = None):
     setupTMDB()
     search = tmdb.Search()
-    response = search.movie(details)
+    print(title)
+    response = search.movie(query = title)
     movieInfo = None
     if ( search.results == 0):
         log.warning("Unable to find " + str(details) + " on tmdb")
@@ -91,10 +97,10 @@ def lookupMovie(details,maxResults = None):
             movieInfo['vote_average'])
 
 def createMovie(title,year):
-    movie = lookupMovie( { 'query' : title , 'year' : year})
+    movie = lookupMovie(title,year)
     if (movie == None):
         log.info("Attempting to get movie without year")
-        movie = lookupMovie( { 'query' : title },1)
+        movie = lookupMovie(title,0,1)
         if (movie == None):
             log.warning("Creating movie without tmdb info")
             movie = Movie(title,None,datetime.date(year,1,1),'',False,None)
@@ -119,8 +125,12 @@ def updateMovies():
             log.error('rss_url is missing from the database')
             raise Exception('Invalid Database')
 
+        log.info("Downloading rss")
+        print(moviesFeed)
         movieInfo = feedparser.parse(moviesFeed)
+        print(str(movieInfo))
         movieTorrents = []
+        log.info("Decoding Movies")
         for x in movieInfo.entries:
             if (DBSession.query(exists().where(Torrent.name == x.title)).scalar() == 1):
                 continue
@@ -153,6 +163,67 @@ def updateMovies():
         log.exception("Update movies caused an exception")
         return False
 
+
+tvRegex = re.compile(r'([A-Za-z0-9\._-]+)\.[sS]?([0-9]{1,3})(?:[eE][pP]?|[xX])([0-9]{1,3})(?:[\._-]*(?:(?:[eE][pP]?)|[xX])[0-9]{1,3})?.*\.([0-9]{3,4}[pP])\.')
+def updateTVShows():
+    try:
+        try:
+            (tvFeed,) = DBSession.query(Setting.value).filter(Setting.name == 'tv_rss_url').one()
+        except NoResultFound:
+            log.error('tv_rss_url is missing from the database')
+            raise Exception('Invalid Database')
+
+        log.info("Downloading rss")
+        print(tvFeed)
+        tvInfo = feedparser.parse(tvFeed)
+        print(str(tvInfo))
+        tvTorrents = []
+        log.info("Decoding Tv Shows")
+        for x in tvInfo.entries:
+            if (DBSession.query(exists().where(Torrent.name == x.title)).scalar() == 1):
+                continue
+            titleSearch = tvRegex.search(x.title)
+            if (titleSearch == None):
+                log.error("Regex failed to parse: " + x.title)
+                log.error(repr(x))
+                continue
+            tvTitle = titleSearch.group(1)
+            tvTitle = tvTitle.replace('.',' ')
+            season = int(titleSearch.group(2))
+            episode = int(titleSearch.group(3))
+            tvQuality = titleSearch.group(4)
+            tvTorrents.append({
+                'title' : tvTitle,
+                'season' : season,
+                'episode' : episode,
+                'quality' : tvQuality,
+                'name' : x.title,
+                'download_path' : x.link
+                })
+
+        for x in tvTorrents:
+            print(str(x))
+        return True
+        for x in tvTorrents:
+            torrent = DBSession.query(Torrent).filter(Torrent.decoded_name == x['title']).first()
+            if (torrent != None):
+                tv_id = torrent.tv_id
+            else:
+                tv_id = createMovie(x['title'],x['release_date'])
+            newTorrent = Torrent(x['name'],x['title'],tv_id,x['download_path'],x['quality'].lower())
+            #DBSession.add(newTorrent)
+        return True
+    except DBAPIError:
+        log.exception("Update TV Shows caused an exception")
+        return False
+
+
+@view_config(route_name='updateTv')
+def update_tv(Request):
+    if (updateTVShows()):
+        return Response('Update finished successfully', content_type='text/plain', status_int=204)
+    return Response('Update was unsuccessfull', content_type='text/plain', status_int=500)
+
 @view_config(route_name='update')
 def update(Request):
     if (updateMovies()):
@@ -165,12 +236,15 @@ def setupTorrentAuth():
     for x in auth_settings:
         auth[x.name[5:]] = x.value
 
-    auth_handler = urllib2.HTTPDigestAuthHandler()
-    auth_handler.add_password(realm=auth['realm'],
+    context = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
+    httpsHandler = urllib2.HTTPSHandler(context = context)
+    manager = urllib2.HTTPPasswordMgr()
+    manager.add_password(realm=auth['realm'],
                                 uri=auth['uri'],
                                 user=auth['user'],
                                 passwd=auth['passwd'])
-    opener = urllib2.build_opener(auth_handler)
+    auth_handler = urllib2.HTTPDigestAuthHandler(manager)
+    opener = urllib2.build_opener(httpsHandler, auth_handler)
     urllib2.install_opener(opener)
 
 def queueTorrentDownload(torrent,download_dir):
@@ -240,9 +314,16 @@ def latestMovies(request):
                 cur_movieid = x.movie_id
             qualities.append(x.quality)
         qualityDict[str(cur_movieid)] = qualities;
+        num_results = 50
+        movies = DBSession.query(Movie).order_by(desc(Movie.id)).limit(num_results).all()
 
-        return { 'baseURL' : baseURL, 'posterSize' : posterSize , 'noPoster' : request.static_url('nassau:static/no-poster-w185.jpg'), 'movies' :
-                DBSession.query(Movie).order_by(desc(Movie.id)).all(), 'qualities' : qualityDict }
+        return {
+                'baseURL' : baseURL,
+                'posterSize' : posterSize ,
+                'noPoster' : request.static_url('nassau:static/no-poster-w185.jpg'),
+                'movies' : movies,
+                'qualities' : qualityDict 
+            }
     except DBAPIError:
         log.exception("Exception when displaying movies")
         return Response(conn_err_msg, content_type='text/plain', status_int=500)
